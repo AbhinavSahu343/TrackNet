@@ -1,30 +1,45 @@
-from core.reliability import calculate_reliability
+from core.reliability import find_best_network
 
 
 def main():
-    jio_score = calculate_reliability(
-        signal=80,
-        latency=40,
-        packet_loss=2
-    )
 
-    airtel_score = calculate_reliability(
-        signal=90,
-        latency=30,
-        packet_loss=1
-    )
+    networks = [
+        {
+            "name": "Jio",
+            "signal": 80,
+            "latency": 40,
+            "packet_loss": 2
+        },
+        {
+            "name": "Airtel",
+            "signal": 90,
+            "latency": 30,
+            "packet_loss": 1
+        },
+        {
+            "name": "Vi",
+            "signal": 55,
+            "latency": 90,
+            "packet_loss": 7
+        }
+    ]
 
-    vi_score = calculate_reliability(
-        signal=55,
-        latency=90,
-        packet_loss=7
-    )
+    best_network = find_best_network(networks)
 
-    print("RailConnect Network Reliability")
-    print("--------------------------------")
-    print(f"Jio: {jio_score}")
-    print(f"Airtel: {airtel_score}")
-    print(f"Vi: {vi_score}")
+    print("RailConnect")
+    print("-----------")
+
+    for network in networks:
+        print(
+            f'{network["name"]}: '
+            f'{network["reliability_score"]}'
+        )
+
+    print()
+    print(
+        f'Recommended network: '
+        f'{best_network["name"]}'
+    )
 
 
 if __name__ == "__main__":

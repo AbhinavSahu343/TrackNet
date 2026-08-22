@@ -20,3 +20,28 @@ def calculate_reliability(signal, latency, packet_loss):
     )
 
     return round(reliability_score, 2)
+
+def find_best_network(networks):
+    """
+    Calculate reliability scores for all networks
+    and return the network with the highest score.
+    """
+
+    best_network = None
+    best_score = -1
+
+    for network in networks:
+
+        score = calculate_reliability(
+            signal=network["signal"],
+            latency=network["latency"],
+            packet_loss=network["packet_loss"]
+        )
+
+        network["reliability_score"] = score
+
+        if score > best_score:
+            best_score = score
+            best_network = network
+
+    return best_network
