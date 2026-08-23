@@ -1,6 +1,6 @@
-# RailConnect
+# TrackNet
 
-RailConnect is a software-based intelligent network reliability and prediction system designed for railway journeys.
+Tracknet is a software-based intelligent network reliability and prediction system designed for railway journeys.
 
 ## Problem
 
@@ -8,7 +8,7 @@ Railway passengers often experience unstable or poor internet connectivity while
 
 ## Proposed Solution
 
-RailConnect analyzes network conditions along a railway route and estimates which available network is likely to provide the most reliable connectivity.
+TrackNet analyzes network conditions along a railway route and estimates which available network is likely to provide the most reliable connectivity.
 
 ## Current Status
 
