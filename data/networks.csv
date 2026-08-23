@@ -1,0 +1,4 @@
+name,signal,latency,packet_loss
+Jio,95,20,1
+Airtel,40,100,8
+Vi,60,70,5

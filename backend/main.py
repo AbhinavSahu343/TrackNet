@@ -1,28 +1,12 @@
+from data_loader import load_network_data
 from core.reliability import find_best_network
 
 
 def main():
 
-    networks = [
-        {
-            "name": "Jio",
-            "signal": 80,
-            "latency": 40,
-            "packet_loss": 2
-        },
-        {
-            "name": "Airtel",
-            "signal": 90,
-            "latency": 30,
-            "packet_loss": 1
-        },
-        {
-            "name": "Vi",
-            "signal": 55,
-            "latency": 90,
-            "packet_loss": 7
-        }
-    ]
+    file_path = "data/networks.csv"
+
+    networks = load_network_data(file_path)
 
     best_network = find_best_network(networks)
 
