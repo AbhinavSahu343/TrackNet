@@ -1,30 +1,42 @@
-from data_loader import load_network_data
-from core.reliability import find_best_network
+from fastapi import FastAPI
+
+from backend.simulation.train import TrainSimulator
 
 
-def main():
-
-    file_path = "data/networks.csv"
-
-    networks = load_network_data(file_path)
-
-    best_network = find_best_network(networks)
-
-    print("RailConnect")
-    print("-----------")
-
-    for network in networks:
-        print(
-            f'{network["name"]}: '
-            f'{network["reliability_score"]}'
-        )
-
-    print()
-    print(
-        f'Recommended network: '
-        f'{best_network["name"]}'
-    )
+app = FastAPI(
+    title="TRACKNET API",
+    description="Edge-AI railway connectivity backend",
+    version="0.1.0"
+)
 
 
-if __name__ == "__main__":
-    main()
+train = TrainSimulator()
+
+
+@app.get("/")
+def root():
+
+    return {
+        "system": "TRACKNET",
+        "status": "online",
+        "message": "TRACKNET backend is running"
+    }
+
+
+@app.get("/health")
+def health():
+
+    return {
+        "status": "healthy"
+    }
+
+
+@app.get("/train/location")
+def train_location():
+
+    return train.get_current_position()
+
+@app.post("/train/move")
+def move_train():
+
+    return train.move_next()

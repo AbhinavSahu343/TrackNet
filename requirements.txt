@@ -4,3 +4,5 @@ scikit-learn
 matplotlib
 fastapi
 uvicorn
+supabase
+python-dotenv
