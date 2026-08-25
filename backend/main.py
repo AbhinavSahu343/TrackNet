@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from backend.simulation.train import TrainSimulator
+from backend.simulation.telemetry import TelemetryGenerator
 
 
 app = FastAPI(
@@ -11,7 +12,7 @@ app = FastAPI(
 
 
 train = TrainSimulator()
-
+telemetry_generator = TelemetryGenerator(train)
 
 @app.get("/")
 def root():
@@ -36,7 +37,14 @@ def train_location():
 
     return train.get_current_position()
 
+
 @app.post("/train/move")
 def move_train():
 
     return train.move_next()
+
+
+@app.get("/telemetry/current")
+def current_telemetry():
+
+    return telemetry_generator.generate_current_telemetry()
