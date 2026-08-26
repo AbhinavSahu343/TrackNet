@@ -41,7 +41,7 @@ def train_location():
 @app.post("/train/move")
 def move_train():
 
-    return train.move_next()
+    return train.move()
 
 
 @app.get("/telemetry/current")
