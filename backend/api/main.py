@@ -1,13 +1,14 @@
+import os
+import asyncio
+
+from contextlib import asynccontextmanager
+
 from fastapi import (
     FastAPI,
     HTTPException
 )
 
 from pydantic import BaseModel
-
-from contextlib import asynccontextmanager
-
-import asyncio
 
 from backend.services.prediction_service import (
     PredictionService
@@ -18,9 +19,35 @@ from backend.services.simulation_service import (
 )
 
 
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+simulation_interval = float(
+    os.getenv(
+        "RAILCONNECT_SIMULATION_INTERVAL",
+        "5"
+    )
+)
+
+movement_multiplier = float(
+    os.getenv(
+        "RAILCONNECT_MOVEMENT_MULTIPLIER",
+        "1"
+    )
+)
+
+
+# ============================================================
+# SERVICES
+# ============================================================
+
 prediction_service = PredictionService()
 
-simulation_service = SimulationService()
+simulation_service = SimulationService(
+    interval_seconds=simulation_interval,
+    movement_multiplier=movement_multiplier
+)
 
 
 # ============================================================
@@ -45,7 +72,9 @@ async def lifespan(app: FastAPI):
                     e
                 )
 
-            await asyncio.sleep(5)
+            await asyncio.sleep(
+                simulation_interval
+            )
 
     task = asyncio.create_task(
         simulation_loop()
@@ -68,6 +97,10 @@ async def lifespan(app: FastAPI):
             pass
 
 
+# ============================================================
+# FASTAPI APPLICATION
+# ============================================================
+
 app = FastAPI(
     title="RailConnect API",
     description=(
@@ -78,9 +111,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-prediction_service = PredictionService()
-
-simulation_service = SimulationService()
 
 # ============================================================
 # REQUEST MODELS
@@ -151,7 +181,8 @@ def predict(
     try:
 
         result = (
-            prediction_service.process_telemetry(
+            prediction_service
+            .process_telemetry(
                 telemetry.network,
                 telemetry.model_dump(
                     exclude={"network"}
@@ -181,9 +212,15 @@ def recommend(
     try:
 
         requests = {
-            "Jio": telemetry.jio,
-            "Airtel": telemetry.airtel,
-            "Vi": telemetry.vi
+
+            "Jio":
+                telemetry.jio,
+
+            "Airtel":
+                telemetry.airtel,
+
+            "Vi":
+                telemetry.vi
         }
 
         predictions = {}
@@ -191,7 +228,8 @@ def recommend(
         for network, request in requests.items():
 
             result = (
-                prediction_service.process_telemetry(
+                prediction_service
+                .process_telemetry(
                     network,
                     request.model_dump(
                         exclude={"network"}
@@ -209,23 +247,28 @@ def recommend(
         if len(predictions) < 3:
 
             return {
+
                 "ready": False,
-                "predictions": predictions,
+
+                "predictions":
+                    predictions,
+
                 "message": (
-                    "Waiting for 60 seconds of "
-                    "telemetry history."
+                    "Waiting for 60 seconds "
+                    "of telemetry history."
                 )
             }
 
         # All networks ready
         recommendation = (
-            prediction_service.recommend(
-                predictions
-            )
+            prediction_service
+            .recommend(predictions)
         )
 
         return {
+
             "ready": True,
+
             **recommendation
         }
 
@@ -235,6 +278,7 @@ def recommend(
             status_code=400,
             detail=str(e)
         )
+
 
 # ============================================================
 # LIVE SIMULATION
@@ -253,7 +297,9 @@ def live():
     if telemetry is None:
 
         return {
+
             "ready": False,
+
             "message": (
                 "Simulation has not started yet."
             )
@@ -377,6 +423,7 @@ def live():
                 )
         }
     }
+
 
 # ============================================================
 # SIMULATION CONTROL — DEVELOPMENT

@@ -15,10 +15,23 @@ class SimulationService:
         "Vi"
     ]
 
-    def __init__(self):
+    def __init__(
+        self,
+        interval_seconds=5,
+        movement_multiplier=1.0
+    ):
+
+        self.interval_seconds = (
+            interval_seconds
+        )
+
+        self.movement_multiplier = (
+            movement_multiplier
+        )
 
         self.generator = TelemetryGenerator(
-            interval_seconds=5
+            interval_seconds=interval_seconds,
+            movement_multiplier=movement_multiplier
         )
 
         self.prediction_service = (
@@ -30,11 +43,15 @@ class SimulationService:
         self.current_predictions = {}
 
         self.current_recommendation = {
+
             "recommended_network": None,
+
             "status": "NO_DATA",
+
             "reason": (
                 "Waiting for telemetry history."
             ),
+
             "networks": {}
         }
 
@@ -163,7 +180,8 @@ class SimulationService:
 
         return {
 
-            "step": self.step_count,
+            "step":
+                self.step_count,
 
             "telemetry":
                 self.current_telemetry,
@@ -178,7 +196,8 @@ class SimulationService:
     def reset(self):
 
         self.generator = TelemetryGenerator(
-            interval_seconds=5
+            interval_seconds=self.interval_seconds,
+            movement_multiplier=self.movement_multiplier
         )
 
         self.prediction_service = (

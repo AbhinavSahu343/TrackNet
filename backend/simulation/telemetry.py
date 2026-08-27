@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from backend.simulation.train import TrainSimulator
+
 from backend.simulation.network import (
     generate_network_telemetry
 )
@@ -11,13 +12,23 @@ class TelemetryGenerator:
     def __init__(
         self,
         train=None,
-        interval_seconds=5
+        interval_seconds=5,
+        movement_multiplier=1.0
     ):
 
-        self.train = train or TrainSimulator()
+        self.train = (
+            train
+            or TrainSimulator(
+                movement_multiplier=movement_multiplier
+            )
+        )
 
         self.interval_seconds = (
             interval_seconds
+        )
+
+        self.movement_multiplier = (
+            movement_multiplier
         )
 
         self.previous_network_state = {}

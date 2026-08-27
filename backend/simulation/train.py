@@ -39,9 +39,17 @@ class TrainSimulator:
         }
     ]
 
-    def __init__(self, speed_kmph=90.0):
+    def __init__(
+        self,
+        speed_kmph=90.0,
+        movement_multiplier=1.0
+    ):
 
         self.speed_kmph = speed_kmph
+
+        self.movement_multiplier = (
+            movement_multiplier
+        )
 
         self.current_distance_km = 0.0
 
@@ -72,7 +80,11 @@ class TrainSimulator:
             start = self.ROUTE[i]
             end = self.ROUTE[i + 1]
 
-            if start["distance_km"] <= distance <= end["distance_km"]:
+            if (
+                start["distance_km"]
+                <= distance
+                <= end["distance_km"]
+            ):
 
                 segment_distance = (
                     end["distance_km"]
@@ -80,7 +92,8 @@ class TrainSimulator:
                 )
 
                 progress = (
-                    distance - start["distance_km"]
+                    distance
+                    - start["distance_km"]
                 ) / segment_distance
 
                 latitude = (
@@ -103,9 +116,18 @@ class TrainSimulator:
 
                 return {
                     "name": start["name"],
-                    "latitude": round(latitude, 6),
-                    "longitude": round(longitude, 6),
-                    "distance_km": round(distance, 3),
+                    "latitude": round(
+                        latitude,
+                        6
+                    ),
+                    "longitude": round(
+                        longitude,
+                        6
+                    ),
+                    "distance_km": round(
+                        distance,
+                        3
+                    ),
                     "speed_kmph": self.speed_kmph,
                     "finished": False
                 }
@@ -117,15 +139,25 @@ class TrainSimulator:
         if self.finished:
             return self.get_current_position()
 
+        effective_seconds = (
+            seconds
+            * self.movement_multiplier
+        )
+
         distance_moved = (
             self.speed_kmph
-            * seconds
+            * effective_seconds
             / 3600
         )
 
-        self.current_distance_km += distance_moved
+        self.current_distance_km += (
+            distance_moved
+        )
 
-        if self.current_distance_km >= self.ROUTE[-1]["distance_km"]:
+        if (
+            self.current_distance_km
+            >= self.ROUTE[-1]["distance_km"]
+        ):
 
             self.current_distance_km = (
                 self.ROUTE[-1]["distance_km"]
@@ -138,6 +170,7 @@ class TrainSimulator:
     def reset(self):
 
         self.current_distance_km = 0.0
+
         self.finished = False
 
         return self.get_current_position()
