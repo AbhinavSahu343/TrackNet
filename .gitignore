@@ -25,3 +25,21 @@ TestResults.xml
 __pycache__/
 *.pyc
 .env
+
+# Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+
+# Generated ML datasets
+ml/data/raw/
+ml/data/processed/
+
+# Generated ML artifacts
+ml/models/*.joblib
+ml/models/*.json

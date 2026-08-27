@@ -8,8 +8,6 @@ NETWORKS = [
 ]
 
 
-# Base signal strength at different points
-# along the Mumbai → Delhi route.
 NETWORK_PROFILES = {
 
     "Jio": {
@@ -44,23 +42,18 @@ NETWORK_PROFILES = {
 }
 
 
-# Artificial degradation zones.
-#
-# These are simulation assumptions.
-# They are NOT real carrier coverage maps.
-
 DEGRADATION_ZONES = {
 
     "Jio": [
-        (680, 780, 30)
+        (690, 735, 45)
     ],
 
     "Airtel": [
-        (950, 1050, 35)
+        (970, 1015, 45)
     ],
 
     "Vi": [
-        (1120, 1220, 30)
+        (1140, 1185, 45)
     ]
 }
 
@@ -112,10 +105,13 @@ def get_degradation(distance_km, network):
 
         if start <= distance_km <= end:
 
-            # Strongest degradation in the middle
-            # of the zone.
-            midpoint = (start + end) / 2
-            half_width = (end - start) / 2
+            midpoint = (
+                start + end
+            ) / 2
+
+            half_width = (
+                end - start
+            ) / 2
 
             distance_from_midpoint = abs(
                 distance_km - midpoint
@@ -154,72 +150,110 @@ def generate_network_telemetry(
             network
         )
 
+        # ------------------------------------------------
+        # IMPORTANT:
+        #
+        # Apply only part of the degradation immediately.
+        #
+        # This creates a gradual deterioration pattern.
+        # ------------------------------------------------
+
         target_signal = (
             base_signal
-            - degradation
+            - degradation * 0.85
         )
 
         previous_signal = previous_state.get(
             network,
-            target_signal
+            base_signal
         )
 
-        # Smooth movement toward the target.
+        # Smooth temporal movement.
         #
-        # This prevents unrealistic jumps.
+        # The current measurement does not immediately
+        # reveal the full degradation.
         signal = (
-            previous_signal * 0.75
-            + target_signal * 0.25
+            previous_signal * 0.90
+            + target_signal * 0.10
         )
 
-        # Small measurement noise.
-        signal += random.gauss(0, 1.5)
+        signal += random.gauss(
+            0,
+            1.2
+        )
 
         signal = max(
             0,
-            min(100, signal)
+            min(
+                100,
+                signal
+            )
         )
 
         signal_ratio = signal / 100
 
+        # ------------------------------------------------
+        # Non-linear degradation
+        #
+        # As signal deteriorates, latency and packet loss
+        # begin increasing more aggressively.
+        # ------------------------------------------------
+
+        degradation_factor = (
+            max(
+                0,
+                (50 - signal) / 50
+            )
+        )
+
         latency = (
-            25
-            + (1 - signal_ratio) * 120
+            30
+            + degradation_factor * 140
             + random.gauss(0, 3)
         )
 
         packet_loss = (
-            max(
-                0,
-                (1 - signal_ratio) * 8
-                + random.gauss(0, 0.3)
-            )
+            degradation_factor * 9
+            + random.gauss(0, 0.25)
+        )
+
+        packet_loss = max(
+            0,
+            packet_loss
         )
 
         download_speed = (
-            max(
-                0,
-                signal_ratio * 80
-                + random.gauss(0, 3)
+            signal_ratio
+            * 80
+            * (
+                1
+                - degradation_factor * 0.6
             )
+            + random.gauss(0, 2.5)
         )
 
         upload_speed = (
-            max(
-                0,
-                signal_ratio * 25
-                + random.gauss(0, 1)
+            signal_ratio
+            * 25
+            * (
+                1
+                - degradation_factor * 0.5
             )
+            + random.gauss(0, 0.8)
         )
 
         telemetry[network] = {
+
             "signal_strength": round(
                 signal,
                 2
             ),
 
             "latency_ms": round(
-                latency,
+                max(
+                    0,
+                    latency
+                ),
                 2
             ),
 
@@ -229,12 +263,18 @@ def generate_network_telemetry(
             ),
 
             "download_speed_mbps": round(
-                download_speed,
+                max(
+                    0,
+                    download_speed
+                ),
                 2
             ),
 
             "upload_speed_mbps": round(
-                upload_speed,
+                max(
+                    0,
+                    upload_speed
+                ),
                 2
             )
         }
