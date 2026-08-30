@@ -102,9 +102,9 @@ async def lifespan(app: FastAPI):
 # ============================================================
 
 app = FastAPI(
-    title="RailConnect API",
+    title="TrackNet API",
     description=(
-        "Backend API for RailConnect "
+        "Backend API for TrackNet "
         "network prediction and recommendation"
     ),
     version="1.0.0",
@@ -156,7 +156,7 @@ class MultiNetworkTelemetryRequest(BaseModel):
 def root():
 
     return {
-        "project": "RailConnect",
+        "project": "TrackNet",
         "status": "running"
     }
 
