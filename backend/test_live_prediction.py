@@ -29,7 +29,7 @@ def main():
     previous_state = None
 
     print(
-        "Starting RailConnect live ML test..."
+        "Starting TrackNet live ML test..."
     )
 
     print()

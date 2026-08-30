@@ -37,7 +37,7 @@ def main():
     train_state = train.reset()
 
     print(
-        "Starting RailConnect live recommendation test..."
+        "Starting TrackNet live recommendation test..."
     )
 
     print()

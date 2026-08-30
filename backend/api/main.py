@@ -25,14 +25,14 @@ from backend.services.simulation_service import (
 
 simulation_interval = float(
     os.getenv(
-        "RAILCONNECT_SIMULATION_INTERVAL",
+        "TRACKNET_SIMULATION_INTERVAL",
         "5"
     )
 )
 
 movement_multiplier = float(
     os.getenv(
-        "RAILCONNECT_MOVEMENT_MULTIPLIER",
+        "TRACKNET_MOVEMENT_MULTIPLIER",
         "1"
     )
 )

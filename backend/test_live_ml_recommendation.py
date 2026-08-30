@@ -13,7 +13,7 @@ NETWORKS = ["Jio", "Airtel", "Vi"]
 def main():
 
     print(
-        "Starting RailConnect live ML recommendation..."
+        "Starting TrackNet live ML recommendation..."
     )
 
     print()
