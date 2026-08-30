@@ -1,116 +1,42 @@
-"use client";
+import { useState, useEffect } from 'react';
 
-import { useEffect, useRef, useCallback } from "react";
-import { openDB, DBSchema, IDBPDatabase } from "idb";
-
-interface QueuedItem {
-  id?: number;
+export interface OfflineOrder {
+  id: string;
+  item: string;
+  seatNumber: string;
   timestamp: number;
-  endpoint: string;
-  method: string;
-  payload: unknown;
-  retries: number;
 }
 
-interface TrackNetDB extends DBSchema {
-  offlineQueue: {
-    key: number;
-    value: QueuedItem;
-  };
-}
+export function useOfflineQueue() {
+  const [queue, setQueue] = useState<OfflineOrder[]>([]);
 
-export const useOfflineQueue = () => {
-  const dbRef = useRef<IDBPDatabase<TrackNetDB> | null>(null);
-  const isProcessingRef = useRef(false);
-
-  // Initialize IndexedDB
   useEffect(() => {
-    const initDB = async () => {
-      dbRef.current = await openDB<TrackNetDB>("TrackNetDB", 1, {
-        upgrade(db) {
-          if (!db.objectStoreNames.contains("offlineQueue")) {
-            db.createObjectStore("offlineQueue", { keyPath: "id", autoIncrement: true });
-          }
-        },
-      });
-    };
-
-    initDB().catch((error) => console.error("Failed to initialize IndexedDB:", error));
-
-    return () => {
-      if (dbRef.current) {
-        dbRef.current.close();
+    const saved = localStorage.getItem('tracknet_offline_orders');
+    if (saved) {
+      try {
+        setQueue(JSON.parse(saved));
+      } catch (e) {
+        setQueue([]);
       }
-    };
-  }, []);
-
-  // Add item to queue
-  const enqueue = useCallback(
-    async (endpoint: string, method: string, payload: unknown) => {
-      if (!dbRef.current) return;
-
-      const item: QueuedItem = {
-        timestamp: Date.now(),
-        endpoint,
-        method,
-        payload,
-        retries: 0,
-      };
-
-      await dbRef.current.add("offlineQueue", item);
-      console.log(`[Offline Queue] Enqueued: ${method} ${endpoint}`);
-    },
-    []
-  );
-
-  // Process queue when back online
-  const processQueue = useCallback(async () => {
-    if (!dbRef.current || isProcessingRef.current) return;
-
-    isProcessingRef.current = true;
-
-    try {
-      const items = await dbRef.current.getAll("offlineQueue");
-
-      for (const item of items) {
-        try {
-          const response = await fetch(item.endpoint, {
-            method: item.method,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(item.payload),
-          });
-
-          if (response.ok) {
-            if (item.id) {
-              await dbRef.current.delete("offlineQueue", item.id);
-            }
-            console.log(`[Offline Queue] Synced: ${item.method} ${item.endpoint}`);
-          } else {
-            item.retries++;
-            if (item.id) {
-              await dbRef.current.put("offlineQueue", item);
-            }
-          }
-        } catch (error) {
-          item.retries++;
-          if (item.id) {
-            await dbRef.current.put("offlineQueue", item);
-          }
-          console.error(`[Offline Queue] Failed to sync: ${item.endpoint}`, error);
-        }
-      }
-    } finally {
-      isProcessingRef.current = false;
     }
   }, []);
 
-  // Listen for online/offline events
-  useEffect(() => {
-    window.addEventListener("online", processQueue);
-    return () => {
-      window.removeEventListener("online", processQueue);
+  const addToQueue = (item: string, seat: string) => {
+    const newOrder: OfflineOrder = {
+      id: Math.random().toString(36).substring(2, 9),
+      item,
+      seatNumber: seat,
+      timestamp: Date.now()
     };
-  }, [processQueue]);
+    const updated = [...queue, newOrder];
+    setQueue(updated);
+    localStorage.setItem('tracknet_offline_orders', JSON.stringify(updated));
+  };
 
-  return { enqueue, processQueue };
-};
+  const clearQueue = () => {
+    setQueue([]);
+    localStorage.removeItem('tracknet_offline_orders');
+  };
+
+  return { queue, addToQueue, clearQueue };
+}

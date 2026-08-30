@@ -1,47 +1,30 @@
-"use client";
 
-import { useEffect, useState } from "react";
-import { Wifi, WifiOff } from "lucide-react";
+'use client';
 
-export const ConnectionBanner: React.FC = () => {
+import { useEffect, useState } from 'react';
+
+export function ConnectionBanner() {
   const [isOnline, setIsOnline] = useState(true);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     setIsOnline(navigator.onLine);
-
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
     return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  if (!mounted) return null;
-
   return (
-    <div
-      className={`flex items-center justify-center gap-2 px-4 py-2 text-white font-semibold ${
-        isOnline ? "bg-green-600" : "bg-red-600"
-      }`}
-    >
-      {isOnline ? (
-        <>
-          <Wifi className="w-5 h-5" />
-          <span>ONLINE (Aggregated Mode)</span>
-        </>
-      ) : (
-        <>
-          <WifiOff className="w-5 h-5" />
-          <span>OFFLINE (Local Edge Mode)</span>
-        </>
-      )}
+    <div className={`w-full text-center py-2.5 text-xs font-bold text-white transition-colors duration-300 ${
+      isOnline ? 'bg-emerald-600' : 'bg-amber-600'
+    }`}>
+      {isOnline ? '🟢 ONBOARD EDGE SYSTEM ONLINE (WAN Aggregation Active)' : '🟠 ONBOARD EDGE SYSTEM OFFLINE (Local Intranet Mode)'}
     </div>
   );
-};
+}
