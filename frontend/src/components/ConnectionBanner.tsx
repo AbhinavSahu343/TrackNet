@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -20,11 +19,11 @@ export function ConnectionBanner() {
     };
   }, []);
 
+  if (isOnline) return null;
+
   return (
-    <div className={`w-full text-center py-2.5 text-xs font-bold text-white transition-colors duration-300 ${
-      isOnline ? 'bg-emerald-600' : 'bg-amber-600'
-    }`}>
-      {isOnline ? '🟢 ONBOARD EDGE SYSTEM ONLINE (WAN Aggregation Active)' : '🟠 ONBOARD EDGE SYSTEM OFFLINE (Local Intranet Mode)'}
+    <div className="w-full text-center py-2 text-[10px] font-bold tracking-[0.2em] uppercase text-amber-100 bg-[#3a2418] border-b border-amber-900/60">
+      Onboard edge system offline — local intranet mode
     </div>
   );
 }

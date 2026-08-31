@@ -36,7 +36,7 @@ export interface LiveTelemetryData {
   };
 }
 
-export function useLiveTelemetry(url: string = 'http://localhost:8000/live', pollInterval: number = 2000) {
+export function useLiveTelemetry(url: string = 'http://127.0.0.1:8000/live', pollInterval: number = 2000) {
   const [data, setData] = useState<LiveTelemetryData | null>(null);
   const [status, setStatus] = useState<'connected' | 'disconnected'>('disconnected');
 
