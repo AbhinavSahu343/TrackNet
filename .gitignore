@@ -43,3 +43,4 @@ ml/data/processed/
 # Generated ML artifacts
 ml/models/*.joblib
 ml/models/*.json
+.rocketride/
