@@ -18,9 +18,9 @@ import {
 const NAV = [
   { label: 'Dashboard', icon: Home, href: '/' },
   { label: 'Live Journey', icon: MapPin, href: '/live-journey' },
-  { label: 'Network Status', icon: Globe, href: '#' },
-  { label: 'Food Booking', icon: Utensils, href: '#' },
-  { label: 'In-Train Services', icon: Train, href: '#' },
+  { label: 'Network Status', icon: Globe, href: '/network-status' },
+  { label: 'Food Booking', icon: Utensils, href: '/food-booking' },
+  { label: 'In-Train Services', icon: Train, href: '/in-train-services' },
   { label: 'SOS / Medical Emergency', icon: Briefcase, href: '#' },
   { label: 'My Bookings', icon: Ticket, href: '#' },
   { label: 'Alerts', icon: Bell, href: '#' },
