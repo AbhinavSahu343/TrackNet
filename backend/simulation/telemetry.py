@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
 from backend.simulation.train import TrainSimulator
-
 from backend.simulation.network import (
     generate_network_telemetry
 )
@@ -15,23 +14,22 @@ class TelemetryGenerator:
         interval_seconds=5,
         movement_multiplier=1.0
     ):
-
-        self.train = (
-            train
-            or TrainSimulator(
-                movement_multiplier=movement_multiplier
-            )
-        )
+        self.train = train or TrainSimulator()
 
         self.interval_seconds = (
             interval_seconds
         )
 
+        # Keep compatibility with SimulationService.
+        #
+        # movement_multiplier is applied to the amount
+        # of simulated time used for each movement step.
         self.movement_multiplier = (
             movement_multiplier
         )
 
         self.previous_network_state = {}
+
 
     def generate_current_telemetry(self):
 
@@ -80,11 +78,28 @@ class TelemetryGenerator:
 
         return telemetry
 
+
     def move_and_generate(self):
 
-        self.train.move(
+        movement_seconds = (
             self.interval_seconds
+            * self.movement_multiplier
         )
+
+        self.train.move(
+            movement_seconds
+        )
+
+        return (
+            self.generate_current_telemetry()
+        )
+
+
+    def reset(self):
+
+        self.train.reset()
+
+        self.previous_network_state = {}
 
         return (
             self.generate_current_telemetry()
@@ -100,7 +115,6 @@ def flatten_telemetry(telemetry):
     ):
 
         row = {
-
             "timestamp":
                 telemetry["timestamp"],
 
@@ -152,6 +166,7 @@ if __name__ == "__main__":
             )
 
         print()
+
         print(
             f"STEP {step}"
         )

@@ -1,5 +1,12 @@
-import { LiveJourneyView } from "../../components/LiveJourneyView";
+'use client';
+
+import { AppShell } from '../../components/AppShell';
+import LiveJourneyView from '../../components/LiveJourneyView';
 
 export default function LiveJourneyPage() {
-  return <LiveJourneyView />;
+  return (
+    <AppShell>
+      <LiveJourneyView />
+    </AppShell>
+  );
 }

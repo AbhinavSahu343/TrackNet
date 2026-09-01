@@ -19,18 +19,24 @@ import {
 const TOTAL_KM = 1380;
 
 /*
- * This route MUST stay synchronized with:
+ * ============================================================
+ * TRACKNET ROUTE
+ * ============================================================
+ *
+ * MUST stay synchronized with:
  *
  * backend/simulation/train.py
  *
  * Backend route:
+ *
  * Mumbai      0 km
- * Surat      280 km
- * Vadodara   400 km
- * Ratlam     650 km
- * Kota       900 km
- * Delhi     1380 km
+ * Surat       280 km
+ * Vadodara    400 km
+ * Ratlam      650 km
+ * Kota        900 km
+ * Delhi       1380 km
  */
+
 const ROUTE = [
   {
     code: 'MMCT',
@@ -82,15 +88,24 @@ const ROUTE = [
   },
 ];
 
-/* -------------------------------------------------------
- * Route calculation
- * ----------------------------------------------------- */
+/* ============================================================
+ * ROUTE CALCULATION
+ * ============================================================ */
 
 function getRouteState(distanceKm: number) {
   const distance = Math.max(
     0,
-    Math.min(TOTAL_KM, Number.isFinite(distanceKm) ? distanceKm : 0)
+    Math.min(
+      TOTAL_KM,
+      Number.isFinite(distanceKm)
+        ? distanceKm
+        : 0
+    )
   );
+
+  /*
+   * Destination reached.
+   */
 
   if (distance >= TOTAL_KM) {
     return {
@@ -107,6 +122,10 @@ function getRouteState(distanceKm: number) {
     };
   }
 
+  /*
+   * Find the current route segment.
+   */
+
   for (let i = 0; i < ROUTE.length - 1; i++) {
     const start = ROUTE[i];
     const end = ROUTE[i + 1];
@@ -120,16 +139,18 @@ function getRouteState(distanceKm: number) {
 
       const segmentProgress =
         segmentDistance > 0
-          ? (distance - start.distance) / segmentDistance
+          ? (distance - start.distance) /
+            segmentDistance
           : 0;
 
       const distanceFromStart =
         distance - start.distance;
 
       /*
-       * Treat the train as being "at" a station when it is
-       * extremely close to that station.
+       * Consider the train to be at a station
+       * when it is within 2 km of it.
        */
+
       const atStation =
         distanceFromStart < 2;
 
@@ -139,18 +160,31 @@ function getRouteState(distanceKm: number) {
         segmentStart: start,
         segmentEnd: end,
         currentIndex: i,
+
         distanceToNext: Math.max(
           0,
-          Math.round(end.distance - distance)
+          Math.round(
+            end.distance - distance
+          )
         ),
+
         progress:
-          Math.round((distance / TOTAL_KM) * 1000) / 10,
+          Math.round(
+            (distance / TOTAL_KM) * 1000
+          ) / 10,
+
         segmentProgress,
+
         atStation,
+
         finished: false,
       };
     }
   }
+
+  /*
+   * Fallback.
+   */
 
   return {
     currentStation: ROUTE[0],
@@ -166,9 +200,134 @@ function getRouteState(distanceKm: number) {
   };
 }
 
-/* -------------------------------------------------------
- * Formatting helpers
- * ----------------------------------------------------- */
+/* ============================================================
+ * VECTOR NAVIGATION POSITION
+ * ============================================================
+ *
+ * The vector map is a visual representation of the
+ * Mumbai → Delhi route.
+ *
+ * Instead of using the overall progress percentage directly,
+ * the train marker is mapped through each route segment.
+ */
+
+function getVectorPosition(distanceKm: number) {
+  const distance = Math.max(
+    0,
+    Math.min(
+      TOTAL_KM,
+      Number.isFinite(distanceKm)
+        ? distanceKm
+        : 0
+    )
+  );
+
+  /*
+   * Coordinates correspond to the visual SVG:
+   *
+   * Mumbai   -> 55,120
+   * Surat    -> 135,75
+   * Vadodara -> 190,55
+   * Ratlam   -> 245,45
+   * Kota     -> 300,35
+   * Delhi    -> 350,25
+   */
+
+  const points = [
+    {
+      distance: 0,
+      x: 55,
+      y: 120,
+    },
+    {
+      distance: 280,
+      x: 135,
+      y: 75,
+    },
+    {
+      distance: 400,
+      x: 190,
+      y: 55,
+    },
+    {
+      distance: 650,
+      x: 245,
+      y: 45,
+    },
+    {
+      distance: 900,
+      x: 300,
+      y: 35,
+    },
+    {
+      distance: 1380,
+      x: 350,
+      y: 25,
+    },
+  ];
+
+  /*
+   * Destination.
+   */
+
+  if (distance >= TOTAL_KM) {
+    return points[points.length - 1];
+  }
+
+  /*
+   * Find the segment containing the train.
+   */
+
+  for (
+    let i = 0;
+    i < points.length - 1;
+    i++
+  ) {
+    const start = points[i];
+    const end = points[i + 1];
+
+    if (
+      distance >= start.distance &&
+      distance <= end.distance
+    ) {
+      const segmentLength =
+        end.distance - start.distance;
+
+      const rawProgress =
+        segmentLength > 0
+          ? (distance - start.distance) /
+            segmentLength
+          : 0;
+
+      /*
+       * Smooth movement between stations.
+       */
+
+      const progress =
+        rawProgress *
+        rawProgress *
+        (3 - 2 * rawProgress);
+
+      return {
+        x:
+          start.x +
+          (end.x - start.x) *
+            progress,
+
+        y:
+          start.y +
+          (end.y - start.y) *
+            progress,
+      };
+    }
+  }
+
+  return points[0];
+}
+
+/* ============================================================
+ * FORMATTING HELPERS
+ * ============================================================ */
 
 function formatDistance(distance: number) {
   if (!Number.isFinite(distance)) {
@@ -176,13 +335,17 @@ function formatDistance(distance: number) {
   }
 
   if (distance >= 1000) {
-    return Math.round(distance).toLocaleString();
+    return Math.round(
+      distance
+    ).toLocaleString();
   }
 
   return Math.round(distance).toString();
 }
 
-function formatUpdatedTime(timestamp?: string) {
+function formatUpdatedTime(
+  timestamp?: string
+) {
   if (!timestamp) {
     return 'Waiting for telemetry';
   }
@@ -193,11 +356,14 @@ function formatUpdatedTime(timestamp?: string) {
     return 'Live telemetry';
   }
 
-  return `Updated ${date.toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })}`;
+  return `Updated ${date.toLocaleTimeString(
+    [],
+    {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }
+  )}`;
 }
 
 function getEtaText(
@@ -228,32 +394,30 @@ function getEtaText(
     return `~${minutes} min`;
   }
 
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
+  const h = Math.floor(
+    minutes / 60
+  );
+
+  const m =
+    minutes % 60;
 
   return m > 0
     ? `~${h}h ${m}m`
     : `~${h}h`;
 }
 
-/* -------------------------------------------------------
- * Props
- *
- * telemetry / connected are optional so this component can
- * either:
- *
- * 1. Fetch telemetry itself using useLiveTelemetry()
- * 2. Receive telemetry from an existing parent
- * ----------------------------------------------------- */
+/* ============================================================
+ * PROPS
+ * ============================================================ */
 
 interface LiveJourneyViewProps {
   telemetry?: LiveTelemetryData | null;
   connected?: boolean;
 }
 
-/* -------------------------------------------------------
- * Component
- * ----------------------------------------------------- */
+/* ============================================================
+ * COMPONENT
+ * ============================================================ */
 
 export function LiveJourneyView({
   telemetry: externalTelemetry,
@@ -265,40 +429,78 @@ export function LiveJourneyView({
   } = useLiveTelemetry();
 
   /*
-   * If the parent passes telemetry, use it.
+   * Use telemetry from parent if supplied.
    * Otherwise use the hook directly.
    */
+
   const telemetry =
-    externalTelemetry ?? liveTelemetry;
+    externalTelemetry ??
+    liveTelemetry;
 
   const connected =
     externalConnected ??
     status === 'connected';
 
+  /*
+   * Live train distance.
+   */
+
   const distance =
     telemetry?.train?.distance_km ?? 0;
+
+  /*
+   * Live speed.
+   */
 
   const speed =
     telemetry?.train?.speed_kmph ?? 0;
 
+  /*
+   * Determine route state.
+   */
+
   const routeState =
     getRouteState(distance);
 
-  const distanceRemaining = Math.max(
-    0,
-    Math.round(TOTAL_KM - distance)
-  );
+  /*
+   * Distance remaining to Delhi.
+   */
 
-  const progress = Math.min(
-    100,
-    Math.max(0, routeState.progress)
-  );
+  const distanceRemaining =
+    Math.max(
+      0,
+      Math.round(
+        TOTAL_KM - distance
+      )
+    );
 
-  const etaText = getEtaText(
-    routeState.distanceToNext,
-    speed,
-    routeState.finished
-  );
+  /*
+   * Overall journey progress.
+   */
+
+  const progress =
+    Math.min(
+      100,
+      Math.max(
+        0,
+        routeState.progress
+      )
+    );
+
+  /*
+   * ETA to next station.
+   */
+
+  const etaText =
+    getEtaText(
+      routeState.distanceToNext,
+      speed,
+      routeState.finished
+    );
+
+  /*
+   * Current GPS position.
+   */
 
   const currentLatitude =
     telemetry?.train?.latitude;
@@ -306,18 +508,34 @@ export function LiveJourneyView({
   const currentLongitude =
     telemetry?.train?.longitude;
 
+  /*
+   * Human-readable current location.
+   */
+
   const currentLocation =
     routeState.atStation
       ? routeState.currentStation.name
       : `Between ${routeState.segmentStart.name} and ${routeState.segmentEnd.name}`;
+
+  /*
+   * Current route code.
+   */
 
   const currentCode =
     routeState.atStation
       ? routeState.currentStation.code
       : `${routeState.segmentStart.code} → ${routeState.segmentEnd.code}`;
 
+  /*
+   * Position of train on vector navigation map.
+   */
+
+  const vectorPosition =
+    getVectorPosition(distance);
+
   return (
     <main className="min-h-screen bg-[#05070a] text-white">
+
       <div className="mx-auto max-w-[1500px] px-5 py-8 lg:px-8">
 
         {/* ==================================================
@@ -327,7 +545,9 @@ export function LiveJourneyView({
         <header className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
 
           <div>
+
             <div className="flex items-center gap-3">
+
               <h1 className="text-4xl font-black tracking-tight sm:text-5xl">
                 LIVE JOURNEY
               </h1>
@@ -339,6 +559,7 @@ export function LiveJourneyView({
                     : 'border-slate-700 bg-slate-900 text-slate-500'
                 }`}
               >
+
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${
                     connected
@@ -347,16 +568,23 @@ export function LiveJourneyView({
                   }`}
                 />
 
-                {connected ? 'LIVE' : 'OFFLINE'}
+                {connected
+                  ? 'LIVE'
+                  : 'OFFLINE'}
+
               </span>
+
             </div>
 
             <p className="mt-2 text-sm text-slate-500">
-              Real-time train location & journey progress
+              Real-time train location &
+              journey progress
             </p>
+
           </div>
 
           <div className="text-left lg:text-right">
+
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-600">
               TRAIN
             </p>
@@ -368,7 +596,9 @@ export function LiveJourneyView({
             <p className="text-sm font-medium text-slate-400">
               Vande Bharat Express
             </p>
+
           </div>
+
         </header>
 
         {/* ==================================================
@@ -378,9 +608,11 @@ export function LiveJourneyView({
         <div className="mb-6 flex items-center justify-between rounded-lg border border-cyan-500/20 bg-cyan-500/[0.05] px-4 py-3">
 
           <div className="flex items-center gap-3">
+
             <Radio className="h-4 w-4 text-[#00e5ff]" />
 
             <div>
+
               <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#00e5ff]">
                 {connected
                   ? 'LIVE JOURNEY DATA AVAILABLE'
@@ -394,18 +626,28 @@ export function LiveJourneyView({
                     )} • Cellular network intelligence active`
                   : 'Connect the telemetry gateway to receive live position data'}
               </p>
+
             </div>
+
           </div>
 
           <div className="hidden items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600 sm:flex">
+
             GPS
+
             <span className="text-[#00e5ff]">
-              {currentLatitude !== undefined &&
-              currentLongitude !== undefined
+
+              {currentLatitude !==
+                undefined &&
+              currentLongitude !==
+                undefined
                 ? 'LOCKED'
                 : 'WAITING'}
+
             </span>
+
           </div>
+
         </div>
 
         {/* ==================================================
@@ -419,11 +661,15 @@ export function LiveJourneyView({
           <section className="relative overflow-hidden rounded-xl border border-slate-800 bg-[#0b0f14] p-6">
 
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+
               <MapPin className="h-3.5 w-3.5" />
+
               Current Location
+
             </div>
 
             <div className="mt-6">
+
               <h2 className="text-3xl font-black tracking-tight text-[#00e5ff] sm:text-4xl">
                 {currentLocation}
               </h2>
@@ -431,11 +677,13 @@ export function LiveJourneyView({
               <p className="mt-1 text-sm text-slate-400">
                 {currentCode}
               </p>
+
             </div>
 
             <div className="mt-8 grid grid-cols-2 gap-6">
 
               <div>
+
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
                   Speed
                 </p>
@@ -443,25 +691,38 @@ export function LiveJourneyView({
                 <p className="mt-1 text-lg font-bold text-white">
                   {Math.round(speed)} km/h
                 </p>
+
               </div>
 
               <div>
+
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
                   Position
                 </p>
 
                 <p className="mt-1 text-sm font-semibold text-slate-300">
-                  {currentLatitude !== undefined
-                    ? `${currentLatitude.toFixed(4)}, ${currentLongitude?.toFixed(4)}`
+
+                  {currentLatitude !==
+                  undefined
+                    ? `${currentLatitude.toFixed(
+                        4
+                      )}, ${currentLongitude?.toFixed(
+                        4
+                      )}`
                     : 'Waiting...'}
+
                 </p>
+
               </div>
 
             </div>
 
             <div className="pointer-events-none absolute -bottom-10 -right-8 opacity-[0.03]">
+
               <Train className="h-48 w-48" />
+
             </div>
+
           </section>
 
           {/* JOURNEY PROGRESS */}
@@ -469,13 +730,17 @@ export function LiveJourneyView({
           <section className="rounded-xl border border-slate-800 bg-[#0b0f14] p-6">
 
             <div className="flex items-center justify-between">
+
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Journey Progress
               </p>
 
               <p className="text-sm font-medium text-slate-500">
-                {formatDistance(distance)} km / {TOTAL_KM.toLocaleString()} km
+                {formatDistance(distance)} km /
+                {' '}
+                {TOTAL_KM.toLocaleString()} km
               </p>
+
             </div>
 
             <div className="mt-5 flex items-end justify-between">
@@ -485,24 +750,30 @@ export function LiveJourneyView({
               </p>
 
               <p className="text-right text-xs uppercase tracking-[0.15em] text-slate-600">
+
                 {routeState.finished
                   ? 'Journey Complete'
                   : 'In Transit'}
+
               </p>
+
             </div>
 
             <div className="mt-6 h-2 overflow-hidden rounded-full bg-slate-800">
+
               <div
                 className="h-full rounded-full bg-[#00e5ff] transition-all duration-700"
                 style={{
                   width: `${progress}%`,
                 }}
               />
+
             </div>
 
             <div className="mt-6 grid grid-cols-2 gap-6">
 
               <div>
+
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
                   Distance Travelled
                 </p>
@@ -510,19 +781,26 @@ export function LiveJourneyView({
                 <p className="mt-1 text-lg font-bold text-white">
                   {formatDistance(distance)} km
                 </p>
+
               </div>
 
               <div>
+
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
                   Remaining
                 </p>
 
                 <p className="mt-1 text-lg font-bold text-white">
-                  {formatDistance(distanceRemaining)} km
+                  {formatDistance(
+                    distanceRemaining
+                  )}{' '}
+                  km
                 </p>
+
               </div>
 
             </div>
+
           </section>
 
           {/* VECTOR NAVIGATION */}
@@ -530,87 +808,140 @@ export function LiveJourneyView({
           <section className="rounded-xl border border-slate-800 bg-[#0b0f14] p-6">
 
             <div className="flex items-center justify-between">
+
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Vector Nav Link
               </p>
 
               <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] text-[#00e5ff]">
+
                 <span className="h-1.5 w-1.5 rounded-full bg-[#00e5ff]" />
+
                 Active
+
               </span>
+
             </div>
 
             <div className="relative mt-5 h-[150px] overflow-hidden rounded-lg border border-slate-800 bg-[#080c11]">
 
-              {/* Grid */}
+              {/* GRID */}
 
               <div
                 className="absolute inset-0 opacity-30"
                 style={{
                   backgroundImage:
                     'linear-gradient(#1e293b 1px, transparent 1px), linear-gradient(90deg, #1e293b 1px, transparent 1px)',
-                  backgroundSize: '16px 16px',
+                  backgroundSize:
+                    '16px 16px',
                 }}
               />
 
-              {/* Route line */}
+              {/* ROUTE */}
 
               <svg
                 className="absolute inset-0 h-full w-full"
                 viewBox="0 0 400 150"
                 preserveAspectRatio="none"
               >
+
+                {/* Base route */}
+
                 <path
-                  d="M 55 120 C 105 100, 100 65, 155 70 C 210 75, 190 35, 245 45 C 295 55, 290 20, 350 25"
+                  d="
+                    M 55 120
+                    C 90 105, 105 85, 135 75
+                    C 155 68, 170 58, 190 55
+                    C 210 52, 225 47, 245 45
+                    C 265 43, 280 37, 300 35
+                    C 320 33, 335 27, 350 25
+                  "
                   fill="none"
                   stroke="#0e7490"
                   strokeWidth="2"
                 />
 
+                {/* Completed route */}
+
                 <path
-                  d="M 55 120 C 105 100, 100 65, 155 70 C 210 75, 190 35, 245 45 C 295 55, 290 20, 350 25"
+                  d="
+                    M 55 120
+                    C 90 105, 105 85, 135 75
+                    C 155 68, 170 58, 190 55
+                    C 210 52, 225 47, 245 45
+                    C 265 43, 280 37, 300 35
+                    C 320 33, 335 27, 350 25
+                  "
                   fill="none"
                   stroke="#00e5ff"
                   strokeWidth="2"
                   strokeDasharray="7 7"
                   pathLength="100"
-                  strokeDashoffset={`${100 - progress}`}
+                  strokeDashoffset={
+                    `${100 - progress}`
+                  }
                 />
+
               </svg>
 
-              {/* Current train position */}
+              {/* TRAIN POSITION */}
 
               <div
                 className="absolute"
                 style={{
-                  left: `${Math.max(
-                    8,
-                    Math.min(92, progress)
-                  )}%`,
-                  top: `${55 - Math.sin(
-                    (progress / 100) * Math.PI * 2
-                  ) * 20}%`,
-                  transform: 'translate(-50%, -50%)',
+                  left: `${
+                    (vectorPosition.x /
+                      400) *
+                    100
+                  }%`,
+
+                  top: `${
+                    (vectorPosition.y /
+                      150) *
+                    100
+                  }%`,
+
+                  transform:
+                    'translate(-50%, -50%)',
+
+                  transition:
+                    'left 700ms ease, top 700ms ease',
                 }}
               >
+
                 <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[#00e5ff] text-[#05070a] shadow-[0_0_20px_rgba(0,229,255,0.6)]">
+
                   <Navigation className="h-4 w-4" />
+
                 </div>
+
               </div>
 
-              {/* Coordinates */}
+              {/* COORDINATES */}
 
               <div className="absolute bottom-2 left-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-600">
-                {currentLatitude !== undefined
-                  ? `${currentLatitude.toFixed(4)}, ${currentLongitude?.toFixed(4)}`
+
+                {currentLatitude !==
+                  undefined
+                  ? `${currentLatitude.toFixed(
+                      4
+                    )}, ${currentLongitude?.toFixed(
+                      4
+                    )}`
                   : 'GPS WAITING'}
+
               </div>
+
+              {/* ROUTE LABEL */}
 
               <div className="absolute right-3 top-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-600">
                 MUMBAI → DELHI
               </div>
+
             </div>
+
           </section>
+
         </div>
 
         {/* ==================================================
@@ -621,27 +952,44 @@ export function LiveJourneyView({
 
           <MetricCard
             label="Speed"
-            value={`${Math.round(speed)} km/h`}
-            icon={<Navigation className="h-4 w-4" />}
+            value={`${Math.round(
+              speed
+            )} km/h`}
+            icon={
+              <Navigation className="h-4 w-4" />
+            }
           />
 
           <MetricCard
             label="Distance Rem."
-            value={`${formatDistance(distanceRemaining)} km`}
-            icon={<MapPin className="h-4 w-4" />}
+            value={`${formatDistance(
+              distanceRemaining
+            )} km`}
+            icon={
+              <MapPin className="h-4 w-4" />
+            }
           />
 
           <MetricCard
             label="Next Station ETA"
             value={etaText}
-            icon={<Clock3 className="h-4 w-4" />}
+            icon={
+              <Clock3 className="h-4 w-4" />
+            }
           />
 
           <MetricCard
             label="System Health"
-            value={connected ? 'Nominal' : 'Offline'}
-            icon={<Radio className="h-4 w-4" />}
+            value={
+              connected
+                ? 'Nominal'
+                : 'Offline'
+            }
+            icon={
+              <Radio className="h-4 w-4" />
+            }
           />
+
         </div>
 
         {/* ==================================================
@@ -655,131 +1003,161 @@ export function LiveJourneyView({
           <section className="rounded-xl border border-slate-800 bg-[#0b0f14] p-6">
 
             <div className="flex items-center justify-between">
+
               <div>
+
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                   Route Timeline
                 </p>
 
                 <p className="mt-1 text-xs text-slate-600">
-                  Mumbai → Delhi • {TOTAL_KM.toLocaleString()} km
+                  Mumbai → Delhi •{' '}
+                  {TOTAL_KM.toLocaleString()} km
                 </p>
+
               </div>
 
               <Train className="h-5 w-5 text-slate-700" />
+
             </div>
 
             <div className="mt-8 space-y-0">
 
-              {ROUTE.map((station, index) => {
-                const reached =
-                  distance >= station.distance;
+              {ROUTE.map(
+                (station, index) => {
 
-                const isCurrent =
-                  index === routeState.currentIndex;
+                  const reached =
+                    distance >=
+                    station.distance;
 
-                const isDestination =
-                  index === ROUTE.length - 1;
+                  const isCurrent =
+                    index ===
+                    routeState.currentIndex;
 
-                return (
-                  <div
-                    key={station.code}
-                    className="relative flex min-h-[76px] gap-4"
-                  >
+                  const isDestination =
+                    index ===
+                    ROUTE.length - 1;
 
-                    {/* Vertical line */}
+                  return (
+                    <div
+                      key={station.code}
+                      className="relative flex min-h-[76px] gap-4"
+                    >
 
-                    {!isDestination && (
-                      <div
-                        className={`absolute left-[7px] top-4 h-[76px] w-px ${
-                          distance >= ROUTE[index + 1].distance
-                            ? 'bg-[#00e5ff]'
-                            : 'bg-slate-800'
-                        }`}
-                      />
-                    )}
+                      {/* VERTICAL LINE */}
 
-                    {/* Station dot */}
-
-                    <div className="relative z-10 pt-1">
-
-                      {isCurrent ? (
-                        <div className="relative flex h-4 w-4 items-center justify-center">
-                          <div className="absolute h-7 w-7 rounded-full border border-[#00e5ff]/30" />
-
-                          <div className="h-3 w-3 rounded-full bg-[#00e5ff] shadow-[0_0_12px_rgba(0,229,255,0.8)]" />
-                        </div>
-                      ) : (
+                      {!isDestination && (
                         <div
-                          className={`h-4 w-4 rounded-full border-2 ${
-                            reached
-                              ? 'border-[#00e5ff] bg-[#00e5ff]'
-                              : 'border-slate-700 bg-[#0b0f14]'
+                          className={`absolute left-[7px] top-4 h-[76px] w-px ${
+                            distance >=
+                            ROUTE[index + 1]
+                              .distance
+                              ? 'bg-[#00e5ff]'
+                              : 'bg-slate-800'
                           }`}
                         />
                       )}
 
-                    </div>
+                      {/* STATION DOT */}
 
-                    {/* Station information */}
+                      <div className="relative z-10 pt-1">
 
-                    <div className="flex-1 pb-5">
+                        {isCurrent ? (
 
-                      <div className="flex items-start justify-between gap-4">
+                          <div className="relative flex h-4 w-4 items-center justify-center">
 
-                        <div>
-                          <p
-                            className={`text-sm font-bold ${
-                              isCurrent
-                                ? 'text-[#00e5ff]'
-                                : reached
-                                  ? 'text-slate-200'
-                                  : 'text-slate-600'
+                            <div className="absolute h-7 w-7 rounded-full border border-[#00e5ff]/30" />
+
+                            <div className="h-3 w-3 rounded-full bg-[#00e5ff] shadow-[0_0_12px_rgba(0,229,255,0.8)]" />
+
+                          </div>
+
+                        ) : (
+
+                          <div
+                            className={`h-4 w-4 rounded-full border-2 ${
+                              reached
+                                ? 'border-[#00e5ff] bg-[#00e5ff]'
+                                : 'border-slate-700 bg-[#0b0f14]'
                             }`}
-                          >
-                            {station.name}
+                          />
 
-                            <span className="ml-2 text-xs font-medium text-slate-600">
-                              ({station.code})
-                            </span>
-                          </p>
-
-                          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">
-                            {station.distance.toLocaleString()} km
-                          </p>
-                        </div>
-
-                        <span
-                          className={`text-[9px] font-bold uppercase tracking-[0.14em] ${
-                            isCurrent
-                              ? 'text-[#00e5ff]'
-                              : reached
-                                ? 'text-slate-500'
-                                : 'text-slate-700'
-                          }`}
-                        >
-                          {isCurrent
-                            ? 'CURRENT'
-                            : reached
-                              ? 'PASSED'
-                              : 'UPCOMING'}
-                        </span>
+                        )}
 
                       </div>
 
-                      {isCurrent && !routeState.finished && (
-                        <p className="mt-2 text-[10px] font-medium text-slate-500">
-                          {routeState.atStation
-                            ? `Train is at ${station.name}`
-                            : `Train is travelling toward ${routeState.segmentEnd.name}`}
-                        </p>
-                      )}
+                      {/* STATION INFORMATION */}
+
+                      <div className="flex-1 pb-5">
+
+                        <div className="flex items-start justify-between gap-4">
+
+                          <div>
+
+                            <p
+                              className={`text-sm font-bold ${
+                                isCurrent
+                                  ? 'text-[#00e5ff]'
+                                  : reached
+                                    ? 'text-slate-200'
+                                    : 'text-slate-600'
+                              }`}
+                            >
+
+                              {station.name}
+
+                              <span className="ml-2 text-xs font-medium text-slate-600">
+                                ({station.code})
+                              </span>
+
+                            </p>
+
+                            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+                              {station.distance.toLocaleString()} km
+                            </p>
+
+                          </div>
+
+                          <span
+                            className={`text-[9px] font-bold uppercase tracking-[0.14em] ${
+                              isCurrent
+                                ? 'text-[#00e5ff]'
+                                : reached
+                                  ? 'text-slate-500'
+                                  : 'text-slate-700'
+                            }`}
+                          >
+
+                            {isCurrent
+                              ? 'CURRENT'
+                              : reached
+                                ? 'PASSED'
+                                : 'UPCOMING'}
+
+                          </span>
+
+                        </div>
+
+                        {isCurrent &&
+                          !routeState.finished && (
+                            <p className="mt-2 text-[10px] font-medium text-slate-500">
+
+                              {routeState.atStation
+                                ? `Train is at ${station.name}`
+                                : `Train is travelling toward ${routeState.segmentEnd.name}`}
+
+                            </p>
+                          )}
+
+                      </div>
 
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                }
+              )}
 
             </div>
+
           </section>
 
           {/* NEXT STATION */}
@@ -787,26 +1165,33 @@ export function LiveJourneyView({
           <section className="rounded-xl border border-slate-800 bg-[#0b0f14] p-6">
 
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#00e5ff]">
+
               <CircleDot className="h-3.5 w-3.5" />
 
               {routeState.finished
                 ? 'Destination'
                 : `Next Station (${routeState.distanceToNext} KM)`}
+
             </div>
 
             <div className="mt-6">
 
               <h2 className="text-4xl font-black tracking-tight text-white">
+
                 {routeState.finished
                   ? 'Delhi'
                   : routeState.nextStation?.name}
+
               </h2>
 
               <p className="mt-1 text-sm font-medium text-slate-500">
+
                 {routeState.finished
                   ? 'NDLS'
                   : routeState.nextStation?.code}
+
               </p>
+
             </div>
 
             {/* NEXT STATION DETAILS */}
@@ -814,20 +1199,25 @@ export function LiveJourneyView({
             <div className="mt-8 grid grid-cols-2 gap-6">
 
               <div>
+
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
                   Distance
                 </p>
 
                 <p className="mt-1 text-xl font-bold text-white">
+
                   {routeState.finished
                     ? '0 km'
                     : `${formatDistance(
                         routeState.distanceToNext
                       )} km`}
+
                 </p>
+
               </div>
 
               <div>
+
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
                   Estimated
                 </p>
@@ -835,6 +1225,7 @@ export function LiveJourneyView({
                 <p className="mt-1 text-xl font-bold text-white">
                   {etaText}
                 </p>
+
               </div>
 
             </div>
@@ -845,29 +1236,38 @@ export function LiveJourneyView({
               <div className="mt-8">
 
                 <div className="mb-2 flex items-center justify-between">
+
                   <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-slate-600">
                     Segment Progress
                   </span>
 
                   <span className="text-[9px] font-semibold text-slate-500">
+
                     {Math.round(
-                      routeState.segmentProgress * 100
+                      routeState.segmentProgress *
+                        100
                     )}%
+
                   </span>
+
                 </div>
 
                 <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
+
                   <div
                     className="h-full rounded-full bg-[#00e5ff] transition-all duration-700"
                     style={{
                       width: `${
-                        routeState.segmentProgress * 100
+                        routeState.segmentProgress *
+                        100
                       }%`,
                     }}
                   />
+
                 </div>
 
                 <div className="mt-2 flex justify-between text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+
                   <span>
                     {routeState.segmentStart.name}
                   </span>
@@ -875,6 +1275,7 @@ export function LiveJourneyView({
                   <span>
                     {routeState.segmentEnd.name}
                   </span>
+
                 </div>
 
               </div>
@@ -887,7 +1288,12 @@ export function LiveJourneyView({
               <button
                 type="button"
                 onClick={() => {
-                  if (typeof navigator !== 'undefined') {
+
+                  if (
+                    typeof navigator !==
+                    'undefined'
+                  ) {
+
                     navigator.clipboard
                       ?.writeText(
                         `TrackNet Live Journey: ${currentLocation} • ${formatDistance(
@@ -895,33 +1301,50 @@ export function LiveJourneyView({
                         )} km / ${TOTAL_KM} km`
                       )
                       .catch(() => {});
+
                   }
+
                 }}
                 className="flex h-12 items-center justify-center gap-2 rounded-lg bg-[#00c8eb] px-4 text-sm font-bold text-[#031016] transition hover:bg-[#19d8f5]"
               >
+
                 <Share2 className="h-4 w-4" />
+
                 Share Live Journey
+
               </button>
 
               <button
                 type="button"
                 onClick={() => {
-                  if (typeof window !== 'undefined') {
+
+                  if (
+                    typeof window !==
+                    'undefined'
+                  ) {
+
                     window.alert(
                       routeState.finished
                         ? 'The train has reached Delhi.'
                         : `Destination alarm set for ${routeState.nextStation?.name}.`
                     );
+
                   }
+
                 }}
                 className="flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-700 bg-transparent px-4 text-sm font-semibold text-slate-200 transition hover:border-[#00e5ff]/50 hover:text-[#00e5ff]"
               >
+
                 <Bell className="h-4 w-4" />
+
                 Set Destination Alarm
+
               </button>
 
             </div>
+
           </section>
+
         </div>
 
         {/* ==================================================
@@ -933,6 +1356,7 @@ export function LiveJourneyView({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
             <div>
+
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Live Route
               </p>
@@ -940,31 +1364,39 @@ export function LiveJourneyView({
               <p className="mt-1 text-sm text-slate-600">
                 Position calculated from live telemetry distance
               </p>
+
             </div>
 
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+
               <Navigation className="h-3.5 w-3.5 text-[#00e5ff]" />
 
-              {currentLatitude !== undefined &&
-              currentLongitude !== undefined
+              {currentLatitude !==
+                undefined &&
+              currentLongitude !==
+                undefined
                 ? `${currentLatitude.toFixed(
                     4
-                  )}, ${currentLongitude.toFixed(4)}`
+                  )}, ${currentLongitude.toFixed(
+                    4
+                  )}`
                 : 'GPS waiting'}
+
             </div>
+
           </div>
 
-          {/* Route bar */}
+          {/* ROUTE BAR */}
 
           <div className="mt-8 px-2 sm:px-8">
 
             <div className="relative h-16">
 
-              {/* Background route */}
+              {/* BACKGROUND ROUTE */}
 
               <div className="absolute left-0 right-0 top-5 h-1 rounded-full bg-slate-800" />
 
-              {/* Completed route */}
+              {/* COMPLETED ROUTE */}
 
               <div
                 className="absolute left-0 top-5 h-1 rounded-full bg-[#00e5ff] transition-all duration-700"
@@ -973,74 +1405,85 @@ export function LiveJourneyView({
                 }}
               />
 
-              {/* Stations */}
+              {/* STATIONS */}
 
-              {ROUTE.map((station, index) => {
+              {ROUTE.map(
+                (station, index) => {
 
-                const stationPosition =
-                  (index /
-                    (ROUTE.length - 1)) *
-                  100;
+                  const stationPosition =
+                    (index /
+                      (ROUTE.length - 1)) *
+                    100;
 
-                const reached =
-                  distance >= station.distance;
+                  const reached =
+                    distance >=
+                    station.distance;
 
-                const isCurrent =
-                  index === routeState.currentIndex;
+                  const isCurrent =
+                    index ===
+                    routeState.currentIndex;
 
-                return (
-                  <div
-                    key={station.code}
-                    className="absolute top-0 -translate-x-1/2"
-                    style={{
-                      left: `${stationPosition}%`,
-                    }}
-                  >
+                  return (
+                    <div
+                      key={station.code}
+                      className="absolute top-0 -translate-x-1/2"
+                      style={{
+                        left: `${stationPosition}%`,
+                      }}
+                    >
 
-                    <div className="flex justify-center">
+                      <div className="flex justify-center">
 
-                      {isCurrent ? (
-                        <div className="relative flex h-11 w-11 items-center justify-center">
-                          <div className="absolute h-8 w-8 rounded-full border border-[#00e5ff]/40" />
+                        {isCurrent ? (
 
-                          <div className="h-4 w-4 rounded-full bg-[#00e5ff] shadow-[0_0_14px_rgba(0,229,255,0.8)]" />
-                        </div>
-                      ) : (
-                        <div
-                          className={`mt-1 h-3 w-3 rounded-full border-2 ${
-                            reached
-                              ? 'border-[#00e5ff] bg-[#00e5ff]'
-                              : 'border-slate-700 bg-[#0b0f14]'
+                          <div className="relative flex h-11 w-11 items-center justify-center">
+
+                            <div className="absolute h-8 w-8 rounded-full border border-[#00e5ff]/40" />
+
+                            <div className="h-4 w-4 rounded-full bg-[#00e5ff] shadow-[0_0_14px_rgba(0,229,255,0.8)]" />
+
+                          </div>
+
+                        ) : (
+
+                          <div
+                            className={`mt-1 h-3 w-3 rounded-full border-2 ${
+                              reached
+                                ? 'border-[#00e5ff] bg-[#00e5ff]'
+                                : 'border-slate-700 bg-[#0b0f14]'
+                            }`}
+                          />
+
+                        )}
+
+                      </div>
+
+                      <div className="mt-2 min-w-[70px] text-center">
+
+                        <p
+                          className={`text-[10px] font-bold uppercase tracking-[0.08em] ${
+                            isCurrent
+                              ? 'text-[#00e5ff]'
+                              : reached
+                                ? 'text-slate-300'
+                                : 'text-slate-700'
                           }`}
-                        />
-                      )}
+                        >
+                          {station.code}
+                        </p>
+
+                        <p className="mt-1 text-[8px] font-medium text-slate-600">
+                          {station.name}
+                        </p>
+
+                      </div>
 
                     </div>
+                  );
+                }
+              )}
 
-                    <div className="mt-2 min-w-[70px] text-center">
-
-                      <p
-                        className={`text-[10px] font-bold uppercase tracking-[0.08em] ${
-                          isCurrent
-                            ? 'text-[#00e5ff]'
-                            : reached
-                              ? 'text-slate-300'
-                              : 'text-slate-700'
-                        }`}
-                      >
-                        {station.code}
-                      </p>
-
-                      <p className="mt-1 text-[8px] font-medium text-slate-600">
-                        {station.name}
-                      </p>
-
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Moving train marker */}
+              {/* MOVING TRAIN MARKER */}
 
               <div
                 className="absolute top-[-2px] -translate-x-1/2 transition-all duration-700"
@@ -1048,16 +1491,22 @@ export function LiveJourneyView({
                   left: `${progress}%`,
                 }}
               >
+
                 <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#00e5ff] text-[#031016] shadow-[0_0_18px_rgba(0,229,255,0.55)]">
+
                   <Train
                     className="h-3.5 w-3.5"
                     strokeWidth={2.4}
                   />
+
                 </div>
+
               </div>
 
             </div>
+
           </div>
+
         </section>
 
         {/* ==================================================
@@ -1075,23 +1524,28 @@ export function LiveJourneyView({
           </span>
 
           <span>
-            DISTANCE {formatDistance(distance)} / {TOTAL_KM} KM
+            DISTANCE {formatDistance(distance)} /{' '}
+            {TOTAL_KM} KM
           </span>
 
           <span>
-            STATUS {connected ? 'CONNECTED' : 'DISCONNECTED'}
+            STATUS{' '}
+            {connected
+              ? 'CONNECTED'
+              : 'DISCONNECTED'}
           </span>
 
         </div>
 
       </div>
+
     </main>
   );
 }
 
-/* -------------------------------------------------------
- * Metric card
- * ----------------------------------------------------- */
+/* ============================================================
+ * METRIC CARD
+ * ============================================================ */
 
 function MetricCard({
   label,
