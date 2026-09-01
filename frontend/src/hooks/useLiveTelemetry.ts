@@ -28,7 +28,7 @@ export interface LiveTelemetryData {
     Vi: NetworkMetrics;
   };
   recommendation: {
-    recommended_network: string;
+    recommended_network: string | null;
     dropout_probability: number | null;
     status: string;
     reason: string;

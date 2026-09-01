@@ -313,7 +313,13 @@ def live():
 
             "message": (
                 "Simulation has not started yet."
-            )
+            ),
+
+            "current_network":
+                state.get(
+                    "current_network",
+                    "Jio"
+                )
         }
 
     networks = {}
@@ -373,6 +379,13 @@ def live():
         state["recommendation"]
     )
 
+    current_network = (
+        state.get(
+            "current_network",
+            "Jio"
+        )
+    )
+
     return {
 
         "ready": (
@@ -385,6 +398,13 @@ def live():
 
         "timestamp":
             telemetry["timestamp"],
+
+        # --------------------------------------------------
+        # ACTUAL ACTIVE NETWORK
+        # --------------------------------------------------
+
+        "current_network":
+            current_network,
 
         "train": {
 

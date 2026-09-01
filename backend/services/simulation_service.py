@@ -29,14 +29,26 @@ class SimulationService:
             movement_multiplier
         )
 
+        # --------------------------------------------------
+        # Telemetry generator
+        # --------------------------------------------------
+
         self.generator = TelemetryGenerator(
             interval_seconds=interval_seconds,
             movement_multiplier=movement_multiplier
         )
 
+        # --------------------------------------------------
+        # Prediction service
+        # --------------------------------------------------
+
         self.prediction_service = (
             PredictionService()
         )
+
+        # --------------------------------------------------
+        # Current simulation state
+        # --------------------------------------------------
 
         self.current_telemetry = None
 
@@ -52,10 +64,27 @@ class SimulationService:
                 "Waiting for telemetry history."
             ),
 
+            "threshold":  0.60,
+
             "networks": {}
         }
 
+        # --------------------------------------------------
+        # IMPORTANT:
+        # Start the journey on Jio.
+        #
+        # The network will only change when the ML system
+        # determines that the current network is actually
+        # at high dropout risk.
+        # --------------------------------------------------
+
+        self.current_network = "Jio"
+
         self.step_count = 0
+
+    # ======================================================
+    # SIMULATION STEP
+    # ======================================================
 
     def step(self):
 
@@ -89,9 +118,9 @@ class SimulationService:
 
         for network in self.NETWORKS:
 
-            metrics = telemetry[
-                "networks"
-            ][network]
+            metrics = (
+                telemetry["networks"][network]
+            )
 
             network_telemetry = {
 
@@ -153,28 +182,78 @@ class SimulationService:
             self.NETWORKS
         ):
 
-            self.current_recommendation = (
+            recommendation = (
                 self.prediction_service
-                .recommend(predictions)
+                .recommend(
+                    predictions,
+                    self.current_network
+                )
+            )
+
+            # ------------------------------------------------
+            # IMPORTANT:
+            #
+            # Do NOT immediately change the network just
+            # because another network has a slightly lower
+            # predicted risk.
+            #
+            # Change only when RecommendationService says
+            # SWITCH_REQUIRED.
+            # ------------------------------------------------
+
+            if (
+                recommendation["status"]
+                == "SWITCH_REQUIRED"
+            ):
+
+                recommended_network = (
+                    recommendation.get(
+                        "recommended_network"
+                    )
+                )
+
+                if (
+                    recommended_network
+                    and
+                    recommended_network
+                    != self.current_network
+                ):
+
+                    self.current_network = (
+                        recommended_network
+                    )
+
+            self.current_recommendation = (
+                recommendation
             )
 
         else:
 
             self.current_recommendation = {
 
-                "recommended_network": None,
+                "recommended_network":
+                    self.current_network,
 
-                "status": "WARMING_UP",
+                "status":
+                    "WARMING_UP",
 
                 "reason": (
                     "Collecting telemetry "
                     "history before prediction."
                 ),
 
-                "networks": {}
+                "threshold":
+                     0.60,
+
+                "networks":
+                    {}
             }
 
         return self.get_current_state()
+
+    # ======================================================
+    # GET CURRENT STATE
+    # ======================================================
 
     def get_current_state(self):
 
@@ -190,8 +269,16 @@ class SimulationService:
                 self.current_predictions,
 
             "recommendation":
-                self.current_recommendation
+                self.current_recommendation,
+
+            # Expose the actual currently selected network
+            "current_network":
+                self.current_network
         }
+
+    # ======================================================
+    # RESET SIMULATION
+    # ======================================================
 
     def reset(self):
 
@@ -210,15 +297,23 @@ class SimulationService:
 
         self.current_recommendation = {
 
-            "recommended_network": None,
+            "recommended_network":
+                None,
 
-            "status": "NO_DATA",
+            "status":
+                "NO_DATA",
 
-            "reason": (
-                "Waiting for telemetry history."
-            ),
+            "reason":
+                "Waiting for telemetry history.",
 
-            "networks": {}
+            "threshold":
+                 0.60,
+
+            "networks":
+                {}
         }
+
+        # Start again with Jio
+        self.current_network = "Jio"
 
         self.step_count = 0

@@ -38,9 +38,7 @@ class PredictionService:
                 f"Unsupported network: {network}"
             )
 
-        engine = self.feature_engines[
-            network
-        ]
+        engine = self.feature_engines[network]
 
         features = engine.update(
             network,
@@ -67,9 +65,11 @@ class PredictionService:
 
     def recommend(
         self,
-        predictions: dict
+        predictions: dict,
+        current_network=None
     ):
 
         return self.recommender.recommend(
-            predictions
+            predictions,
+            current_network
         )

@@ -59,7 +59,10 @@ class TrainSimulator:
 
         distance = self.current_distance_km
 
+        # --------------------------------------------------
         # End of journey
+        # --------------------------------------------------
+
         if distance >= self.ROUTE[-1]["distance_km"]:
 
             destination = self.ROUTE[-1]
@@ -73,8 +76,10 @@ class TrainSimulator:
                 "finished": True
             }
 
-        # Find the two route points surrounding
-        # the current train position.
+        # --------------------------------------------------
+        # Find surrounding route points
+        # --------------------------------------------------
+
         for i in range(len(self.ROUTE) - 1):
 
             start = self.ROUTE[i]
@@ -137,22 +142,32 @@ class TrainSimulator:
     def move(self, seconds=5):
 
         if self.finished:
+
             return self.get_current_position()
 
-        effective_seconds = (
-            seconds
-            * self.movement_multiplier
-        )
+        # --------------------------------------------------
+        # Normal movement
+        #
+        # 90 km/h × 5 sec = 0.125 km
+        #
+        # movement_multiplier allows us to accelerate
+        # the simulation for demonstrations.
+        # --------------------------------------------------
 
         distance_moved = (
             self.speed_kmph
-            * effective_seconds
+            * seconds
             / 3600
+            * self.movement_multiplier
         )
 
         self.current_distance_km += (
             distance_moved
         )
+
+        # --------------------------------------------------
+        # End of journey
+        # --------------------------------------------------
 
         if (
             self.current_distance_km

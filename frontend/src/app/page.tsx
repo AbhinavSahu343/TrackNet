@@ -17,10 +17,10 @@ export default function Home() {
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-[28px] sm:text-[32px] font-bold tracking-tight text-[#7eefff]">
-                22436 Vande Bharat Express
+                TrackNet — Mumbai to Delhi
               </h1>
               <span className="rounded-full border border-slate-700 bg-[#161b22] px-3 py-1 text-[11px] text-slate-400">
-                NDLS to BSB Journey
+                Live Railway Connectivity Monitoring
               </span>
             </div>
             <p className="mt-1 text-[11px] tracking-wide text-slate-500">V3.4 Precision-Active</p>
